@@ -1,11 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"strings"
 
-	"io/ioutil"
 	"os"
 
 	imgcat "github.com/martinlindhe/imgcat/lib"
@@ -16,7 +17,6 @@ import (
 )
 
 var showQRCode bool
-var accountName string
 var debug bool
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,36 +34,37 @@ var rootCmd = &cobra.Command{
 
 		home := getTOTPHome()
 
-		data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.txt", home, issuerName))
+		fileName := fmt.Sprintf("%s/%s.txt", home, issuerName)
+
+		file, err := os.Open(fileName)
 		if err != nil {
-			fmt.Println(err)
-			return
+			log.Fatal(err)
 		}
-		secret := string(data)
-		secret = strings.TrimSpace(secret)
+		defer file.Close()
 
-		totp := gotp.NewDefaultTOTP(secret)
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
 
-		if showQRCode {
-			if len(accountName) == 0 {
-				fmt.Println("you must specify --account flag value")
-				return
-			}
-
-			url := totp.ProvisioningUri(accountName, issuerName)
-			if debug {
-				fmt.Println()
-				fmt.Println("encoded url = " + url)
-			}
-			qrBytes, _ := generateQRCodeImage(url)
+			terms := strings.Split(line, " ")
+			account := terms[0]
+			secret := strings.TrimSpace(terms[1])
+			totp := gotp.NewDefaultTOTP(secret)
 
 			fmt.Println()
-			r := bytes.NewReader(qrBytes)
-			imgcat.Cat(r, os.Stdout)
-			return
+			fmt.Println("account    :", account)
+			if showQRCode {
+				renderQRCode(totp, account, issuerName)
+				continue
+			}
+
+			fmt.Println(totp.Now())
 		}
 
-		fmt.Println(totp.Now())
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
 	},
 }
 
@@ -79,7 +80,6 @@ func Execute() {
 func init() {
 	flags := rootCmd.Flags()
 	flags.BoolVar(&showQRCode, "qr", false, "show qr code")
-	flags.StringVar(&accountName, "account", "", "account name")
 	flags.BoolVar(&debug, "debug", false, "debug")
 }
 
@@ -96,6 +96,23 @@ func generateQRCodeImage(url string) ([]byte, error) {
 		return nil, err
 	}
 	return code.PNG(), nil
+}
+
+func renderQRCode(totp *gotp.TOTP, accountName, issuerName string) {
+	if len(accountName) == 0 {
+		fmt.Println("you must specify --account flag value")
+		return
+	}
+
+	url := totp.ProvisioningUri(accountName, issuerName)
+
+	fmt.Println("QR encoded : " + url)
+
+	qrBytes, _ := generateQRCodeImage(url)
+
+	r := bytes.NewReader(qrBytes)
+	imgcat.Cat(r, os.Stdout)
+	return
 }
 
 func main() {
