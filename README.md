@@ -4,3 +4,6 @@ Generates TOTP from command line.
 
 Generate QA code
 ![screenshot of totp](./assets/totp2.png)
+
+Store your secets in ~/.totp/<issuer_name>.txt
+![screenshot of totp](./assets/totp3.png)

@@ -106,7 +106,9 @@ func renderQRCode(totp *gotp.TOTP, accountName, issuerName string) {
 
 	url := totp.ProvisioningUri(accountName, issuerName)
 
-	fmt.Println("QR encoded : " + url)
+	if debug {
+		fmt.Println("QR encoded : " + url)
+	}
 
 	qrBytes, _ := generateQRCodeImage(url)
 
