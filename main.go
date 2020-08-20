@@ -9,6 +9,7 @@ import (
 
 	"os"
 
+	"github.com/atotto/clipboard"
 	imgcat "github.com/martinlindhe/imgcat/lib"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -58,6 +59,8 @@ var rootCmd = &cobra.Command{
 				continue
 			}
 
+			totpCode := totp.Now()
+			clipboard.WriteAll(totpCode)
 			fmt.Println(totp.Now())
 		}
 
